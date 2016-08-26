@@ -92,13 +92,13 @@ for idx, row in df.iterrows():
       'y' : data[:, 1]
     })
 
-    slope_samples = fit.extract()['a'][numpy.random.choice(range(2000, 4000), 50, replace = False)]
+    slope_samples = fit.extract()['a'][numpy.random.choice(range(2000, 4000), 500, replace = False)]
 
     slopes.append(slope_samples)
 
     plt.plot(data[:, 0], data[:, 1], '-*')
 
-    for i in numpy.random.choice(range(2000, 4000), 5, replace = False):
+    for i in numpy.random.choice(range(2000, 4000), 50, replace = False):
         plt.plot(data[:, 0], fit.extract()['yhat'][i], '--*')
     plt.show()
 
@@ -137,13 +137,14 @@ parameters {
 model {
   //sigmas ~ cauchy(0.0, 10.0);
   sigma ~ cauchy(0.0, 10.0);
+  b ~ cauchy(0.0, 10.0);
 
   //for(n in 1:N) {
   //  y[n] ~ lognormal(mus[labels[n]], sigmas[labels[n]]);
   //}
 
   for(l in 1:L) {
-    mus[l] ~ normal(a * log(stress[l]) + b * log(thickness[l]) + c, sigma);
+    mus[l] ~ normal(a * (log(stress[l]) + b * log(thickness[l])) + c, sigma);
   }
 }
 
@@ -151,7 +152,7 @@ generated quantities {
   vector[L] yhat;//log
 
   for(l in 1:L) {
-    yhat[l] <- lognormal_rng(normal_rng(a * log(stress[l]) + b * log(thickness[l]) + c, sigma), sigmas[l]);
+    yhat[l] <- lognormal_rng(normal_rng(a * (log(stress[l]) + b * log(thickness[l])) + c, sigma), sigmas[l]);
   }
 }
 """
@@ -233,6 +234,30 @@ df2 = pandas.DataFrame(data = { 'thickness' : thickness_, 'stresses' : stresses_
 seaborn.boxplot(x = 'stresses', y = 'log_slopes', hue = 'generated', data = df2, linewidth = 0.5)
 plt.gcf().set_size_inches((24, 12))
 plt.show()
+#%%
+import seaborn
+import pandas
+import matplotlib.pyplot as plt
+
+df3 = pandas.DataFrame({'a' : r['a'][-200:], 'b' : r['b'][-200:], 'c' : r['c'][-200:], 'sigma' : r['sigma'][-200:]})
+
+seaborn.pairplot(df3)
+plt.gcf().set_size_inches((12, 8))
+plt.show()
+
+import scipy.stats
+
+g = seaborn.PairGrid(df3)
+g.map_diag(plt.hist)
+g.map_offdiag(seaborn.kdeplot, n_levels = 6);
+plt.gcf().set_size_inches((12, 8))
+plt.show()
+
+for name, d in [('a', r['a']), ('b', r['b']), ('c', r['c']), ('sigma', r['sigma'])]:
+    seaborn.distplot(d[-200:], kde = False, fit = scipy.stats.norm)
+    plt.title("Dist. {0} w/ mean {1:0.4f} and std. {2:0.4f}".format(name, numpy.mean(d[-200:]), numpy.std(d[-200:])))
+    plt.gcf().set_size_inches((5, 4))
+    plt.show()
 #%%
 #data2 = scipy.io.loadmat('jackie/CreepInfo_90MPa_corr_NoBlip.mat')['CreepInfo_090corr_NoBlip'][::20]
 #data3 = scipy.io.loadmat('jackie/CreepInfo_105MPa_corr.mat')['CreepInfo_105corr'][::20]
