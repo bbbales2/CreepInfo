@@ -5,36 +5,39 @@ import matplotlib.pyplot as plt
 import pystan
 import numpy
 import seaborn
+import pandas
 
 #data1 = scipy.io.loadmat()[]
 files = [
-    ['/home/bbales2/CreepInfo/2000nm-2B-2A/creep_2000A_200MPa_noTertiary.mat', 'creep2000A_200MPa_notertiary', 1.0 / 2.0, 1.0, 2000, 200, 0.0],
-    ['/home/bbales2/CreepInfo/2000nm-2B-2A/creep_2000B_150MPa.mat', 'creep_2B_150_good', 1.0 / 2, 1.0, 2000, 150, 0.0],
-    ['/home/bbales2/CreepInfo/2000nm-2B-2A/creep_2000B_170MPa.mat', 'creep_2B_170_good', 0.0, 1.0, 2000, 170, 0.0],
-    ['/home/bbales2/CreepInfo/2000nm-2B-2A/creep_2000B_190MPa.mat', 'creep_2B_190_full', 0.0, -1.0 / 4.0, 2000, 190, 0.0],
-    ['/home/bbales2/CreepInfo/2000nm-2B-2A/creep_2000B_200MPa.mat', 'creep_2B_200_goodyay', 0.0, 1.0, 2000, 200, 0.0],
-    ['/home/bbales2/CreepInfo/8000nm-8A/creep_8000A_140MPa.mat', 'creepinfo_8A_140', 1.0 / 2.0, 1.0, 8000, 140, 0.0],
-    ['/home/bbales2/CreepInfo/8000nm-8A/creep_8000A_150MPa.mat', 'creepinfo_8A_150', 1.0 / 2.0, 1.0, 8000, 150, 0.0],
-    ['/home/bbales2/CreepInfo/200nm-200A-200B/creep_200A_245MPa.mat', 'creepinfo_200a_245_full', 1.0 / 2.0, -1.0 / 4.0, 200, 245, 0.0],
-    ['/home/bbales2/CreepInfo/200nm-200A-200B/creep_200A_260MPa.mat', 'creepinfo_200a_260', 0.0, 1.0, 200, 260, 0.0],
-    ['/home/bbales2/CreepInfo/200nm-200A-200B/creep_200A_290MPa.mat', 'creepinfo_200a_290_full', 0.0, 1.0 / 4.0, 200, 290, 0.0],
-    ['/home/bbales2/CreepInfo/200nm-200A-200B/creep_200B_275MPa.mat', 'creepinfo_200B_275MPa', 1.0 / 2.0, 1.0, 200, 275, 0.0],
-    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/As Rolled/creep_65C_320MPa.mat', 'creep65C_320full', 1.0 / 2.0, 1.0, 65, 320, 3.0],
-    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/As Rolled/creep_65C_350MPa.mat', 'creep65C_350full', 0.0, 1.0 / 2.0, 65, 350, 71.0],
-    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/As Rolled/creep_65D_275MPa.mat', 'CreepInfo_275corr', 1.0 / 2.0, 1.0, 65, 275, 4.3],
-    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/As Rolled/creep_65D_290MPa.mat', 'CreepInfo_290corr', 0.0, 1.0, 65, 290, 103.1],
-    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/As Rolled/creep_65D_320MPa.mat', 'CreepInfo_320corr', 0.0, 1.0, 65, 320, 193.4],
-    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/As Rolled/creep_65D_335MPa.mat', 'CreepInfo_335corrected', 0.0, 1.0, 65, 335, 266.1],
-    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/Heat Treatment/creep_65B_230MPa.mat', 'CreepInfo65B_230full', 0.0, 1.0, 65, 230, 447.8],
-    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/Heat Treatment/creep_65B_245MPa.mat', 'CreepInfo65B_245full', 0.0, 1.0, 65, 245, 514.6],
-    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/Heat Treatment/creep_65B_260MPa.mat', 'CreepInfo65B_260full', 0.0, 1.0, 65, 260, 593.1],
-    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/Heat Treatment/creep_65B_290MPa.mat', 'CreepInfo65B_290full', 0.0, 1.0, 65, 290, 641.6],
-    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/Heat Treatment/creep_65B_320MPa.mat', 'CreepInfo65B_320full', 0.0, 1.0, 65, 320, 721.3],
-    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/Heat Treatment/creep_65B_350MPa.mat', 'CreepInfo65B_350full', 0.0, 1.0, 65, 350, 827.5],
-    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/Heat Treatment/creep_65B_370MPa_noTertiary.mat', 'CreepInfo65B_370beforetertiary', 0.0, 1.0, 65, 370, 895.8],
-    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/Heat Treatment/creep_65HT_320MPa.mat', 'creep65HT_320full', 1.0 / 2.0, 1.0, 65, 320, 723.0],
-    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/Heat Treatment/creep_65HT_350MPa_noTertiary.mat', 'creep65HT_350notertiary', 0.0, 1.0, 65, 350, 813.3]
+    ['/home/bbales2/CreepInfo/2000nm-2B-2A/creep_2000A_200MPa_noTertiary.mat', 'creep2000A_200MPa_notertiary', 1.0 / 2.0, 1.0, 2000, 200, 0.0, False],
+    ['/home/bbales2/CreepInfo/2000nm-2B-2A/creep_2000B_150MPa.mat', 'creep_2B_150_good', 1.0 / 2, 1.0, 2000, 150, 0.0, False],
+    ['/home/bbales2/CreepInfo/2000nm-2B-2A/creep_2000B_170MPa.mat', 'creep_2B_170_good', 0.0, 1.0, 2000, 170, 0.0, False],
+    ['/home/bbales2/CreepInfo/2000nm-2B-2A/creep_2000B_190MPa.mat', 'creep_2B_190_full', 0.0, -1.0 / 4.0, 2000, 190, 0.0, False],
+    ['/home/bbales2/CreepInfo/2000nm-2B-2A/creep_2000B_200MPa.mat', 'creep_2B_200_goodyay', 0.0, 1.0, 2000, 200, 0.0, False],
+    ['/home/bbales2/CreepInfo/8000nm-8A/creep_8000A_140MPa.mat', 'creepinfo_8A_140', 1.0 / 2.0, 1.0, 8000, 140, 0.0, False],
+    ['/home/bbales2/CreepInfo/8000nm-8A/creep_8000A_150MPa.mat', 'creepinfo_8A_150', 1.0 / 2.0, 1.0, 8000, 150, 0.0, False],
+    ['/home/bbales2/CreepInfo/200nm-200A-200B/creep_200A_245MPa.mat', 'creepinfo_200a_245_full', 1.0 / 2.0, -1.0 / 4.0, 200, 245, 0.0, False],
+    ['/home/bbales2/CreepInfo/200nm-200A-200B/creep_200A_260MPa.mat', 'creepinfo_200a_260', 0.0, 1.0, 200, 260, 0.0, False],
+    ['/home/bbales2/CreepInfo/200nm-200A-200B/creep_200A_290MPa.mat', 'creepinfo_200a_290_full', 0.0, 1.0 / 4.0, 200, 290, 0.0, False],
+    ['/home/bbales2/CreepInfo/200nm-200A-200B/creep_200B_275MPa.mat', 'creepinfo_200B_275MPa', 1.0 / 2.0, 1.0, 200, 275, 0.0, False],
+    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/As Rolled/creep_65C_320MPa.mat', 'creep65C_320full', 1.0 / 2.0, 1.0, 65, 320, 3.0, False],
+    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/As Rolled/creep_65C_350MPa.mat', 'creep65C_350full', 0.0, 1.0 / 2.0, 65, 350, 71.0, False],
+    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/As Rolled/creep_65D_275MPa.mat', 'CreepInfo_275corr', 1.0 / 2.0, 1.0, 65, 275, 4.3, False],
+    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/As Rolled/creep_65D_290MPa.mat', 'CreepInfo_290corr', 0.0, 1.0, 65, 290, 103.1, False],
+    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/As Rolled/creep_65D_320MPa.mat', 'CreepInfo_320corr', 0.0, 1.0, 65, 320, 193.4, False],
+    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/As Rolled/creep_65D_335MPa.mat', 'CreepInfo_335corrected', 0.0, 1.0, 65, 335, 266.1, False],
+    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/Heat Treatment/creep_65B_230MPa.mat', 'CreepInfo65B_230full', 0.0, 1.0, 65, 230, 447.8, True],
+    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/Heat Treatment/creep_65B_245MPa.mat', 'CreepInfo65B_245full', 0.0, 1.0, 65, 245, 514.6, True],
+    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/Heat Treatment/creep_65B_260MPa.mat', 'CreepInfo65B_260full', 0.0, 1.0, 65, 260, 593.1, True],
+    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/Heat Treatment/creep_65B_290MPa.mat', 'CreepInfo65B_290full', 0.0, 1.0, 65, 290, 641.6, True],
+    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/Heat Treatment/creep_65B_320MPa.mat', 'CreepInfo65B_320full', 0.0, 1.0, 65, 320, 721.3, True],
+    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/Heat Treatment/creep_65B_350MPa.mat', 'CreepInfo65B_350full', 0.0, 1.0, 65, 350, 827.5, True],
+    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/Heat Treatment/creep_65B_370MPa_noTertiary.mat', 'CreepInfo65B_370beforetertiary', 0.0, 1.0, 65, 370, 895.8, True],
+    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/Heat Treatment/creep_65HT_320MPa.mat', 'creep65HT_320full', 1.0 / 2.0, 1.0, 65, 320, 723.0, True],
+    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/Heat Treatment/creep_65HT_350MPa_noTertiary.mat', 'creep65HT_350notertiary', 0.0, 1.0, 65, 350, 813.3, True]
 ]
+
+df = pandas.DataFrame(files, columns = ['file', 'variable', 'iminf', 'imaxf', 'thickness', 'stress', 'heat_treatment', 'treated'])
 #%%
 
 model_code = """
@@ -67,13 +70,10 @@ sm = pystan.StanModel(model_code = model_code)
 
 #%%
 
-
-#%%
-a
-seaborn.distplot(a['a'])
 #%%
 slopes = []
-for filename, variable, imin, imax, _, _, _ in files[:]:
+for idx, row in df.iterrows():
+    filename, variable, imin, imax, _, _, _, heat_treated = row.values
     data = scipy.io.loadmat(filename)
     data = data[variable]
     imin = int(len(data) * imin)
@@ -92,7 +92,7 @@ for filename, variable, imin, imax, _, _, _ in files[:]:
       'y' : data[:, 1]
     })
 
-    slope_samples = fit.extract()['a'][numpy.random.choice(range(2000, 4000), 100, replace = False)]
+    slope_samples = fit.extract()['a'][numpy.random.choice(range(2000, 4000), 50, replace = False)]
 
     slopes.append(slope_samples)
 
@@ -112,37 +112,38 @@ for filename, variable, imin, imax, _, _, _ in files[:]:
 
 model_code = """
 data {
-  int<lower=1> N; // Number of single samples
+  //int<lower=1> N; // Number of single samples
   int<lower=1> L;
   int<lower=1> T;
-  int<lower=1> labels[N];
+  //int<lower=1> labels[N];
   vector<lower=0.0>[L] stress;
   //vector<lower=0.0>[L] thickness;
   int<lower=1> thickness[L];
-  vector<lower=0.0>[N] y;
-  //vector[L] mus;
-  //vector<lower=0.0>[L] sigmas;
+  //vector<lower=0.0>[N] y;
+  vector[L] mus;
+  vector<lower=0.0>[L] sigmas;
 }
 
 parameters {
-  real mus[L];
-  real<lower=0.0> sigmas[L];
+  //real mus[L];
+  //real<lower=0.0> sigmas[L];
 
   real<lower=0.0> sigma;
   real a;
-  real b[T];
+  real b;//[T];
+  real c;
 }
 
 model {
-  sigmas ~ cauchy(0.0, 10.0);
+  //sigmas ~ cauchy(0.0, 10.0);
   sigma ~ cauchy(0.0, 10.0);
 
-  for(n in 1:N) {
-    y[n] ~ lognormal(mus[labels[n]], sigmas[labels[n]]);
-  }
+  //for(n in 1:N) {
+  //  y[n] ~ lognormal(mus[labels[n]], sigmas[labels[n]]);
+  //}
 
   for(l in 1:L) {
-    mus[l] ~ normal(a * log(stress[l]) + b[thickness[l]], sigma);
+    mus[l] ~ normal(a * log(stress[l]) + b * log(thickness[l]) + c, sigma);
   }
 }
 
@@ -150,16 +151,15 @@ generated quantities {
   vector[L] yhat;//log
 
   for(l in 1:L) {
-    yhat[l] <- lognormal_rng(normal_rng(a * log(stress[l]) + b[thickness[l]], sigma), sigmas[l]);
+    yhat[l] <- lognormal_rng(normal_rng(a * log(stress[l]) + b * log(thickness[l]) + c, sigma), sigmas[l]);
   }
 }
 """
 
 sm2 = pystan.StanModel(model_code = model_code)
 #%%
-_, _, _, _, thicknesses, _, _ = zip(*files)
 
-thicknessLabels = dict([(v, i + 1) for i, v in enumerate(sorted(list(set(thicknesses))))])
+thicknessLabels = dict([(v, i + 1) for i, v in enumerate(sorted(list(set(df['thickness']))))])
 #%%
 
 ys = []
@@ -169,28 +169,30 @@ labels = []
 mus = []
 sigmas = []
 slopes2 = []
-for e, (slope_samples, (_, _, _, _, thickness, stress, heat_treatment)) in enumerate(zip(slopes, files)):
-    if heat_treatment == 447.8:
+for idx, row in df.iterrows():
+    if row['treated']:
         break
 
-    slopes2.append(numpy.log(slope_samples))
-    thicknesses.append(thicknessLabels[thickness])
-    stresses.append(stress)
+    slope_samples = slopes[idx]
+
+    slopes2.append(slope_samples)
+    thicknesses.append(row['thickness'])#thicknessLabels[]
+    stresses.append(row['stress'])
     ys.extend(slope_samples)
-    labels.extend([e + 1] * len(slope_samples))
+    labels.extend([idx + 1] * len(slope_samples))
     mus.append(numpy.log(slope_samples).mean())
     sigmas.append(numpy.log(slope_samples).std())
 #%%
 fit2 = sm2.sampling(data = {
-    'N' : len(ys),
+    #'N' : len(ys),
     'L' : len(stresses),
     'T' : len(thicknesses),
-    'y' : ys,
+    #'y' : ys,
     'thickness' : thicknesses,
     'stress' : stresses,
-    'labels' : labels
-    #'mus' : mus,
-    #'sigmas' : sigmas
+    #'labels' : labels
+    'mus' : mus,
+    'sigmas' : sigmas
 })
 
 print fit2
@@ -198,9 +200,39 @@ print fit2
 r = fit2.extract()
 #%%
 for slope_samples, generated in zip(slopes2, r['yhat'].transpose()):
-    seaborn.distplot(slope_samples, norm_hist = True)#, alpha = 0.5)
-    seaborn.distplot(generated[-200:], norm_hist = True)#, alpha = 0.5)
+    seaborn.distplot(slope_samples, norm_hist = True)
+    seaborn.distplot(generated[-200:], norm_hist = True)
+    print slope_samples.mean(), generated[-200:].mean()
+    plt.legend(['data', 'generated'])
     plt.show()
+#%%
+thickness_ = []
+stresses_ = []
+slopes_ = []
+generated_ = []
+
+for idx, row in df.sort_values('thickness', ascending = False).iterrows():
+    if row['treated']:
+        continue
+
+    thickness_.extend([row['thickness']] * len(slopes[idx]))
+    stresses_.extend([row['stress']] * len(slopes[idx]))
+    slopes_.extend(numpy.log(slopes[idx]))
+    generated_.extend(['Measured, h = {0}'.format(row['thickness'])] * len(slopes[idx]))
+
+    thickness_.extend([row['thickness']] * len(slopes[idx]))
+    stresses_.extend([row['stress']] * len(slopes[idx]))
+    slopes_.extend(numpy.log(r['yhat'][-len(slopes[idx]):, idx]))
+    generated_.extend(['Generated, h = {0}'.format(row['thickness'])] * len(slopes[idx]))
+
+df2 = pandas.DataFrame(data = { 'thickness' : thickness_, 'stresses' : stresses_, 'log_slopes' : slopes_, 'generated' : generated_ })
+
+#for thickness in sorted(set(df2['thickness'])):
+#    df3 = df2[df2['thickness'] == thickness]
+
+seaborn.boxplot(x = 'stresses', y = 'log_slopes', hue = 'generated', data = df2, linewidth = 0.5)
+plt.gcf().set_size_inches((24, 12))
+plt.show()
 #%%
 #data2 = scipy.io.loadmat('jackie/CreepInfo_90MPa_corr_NoBlip.mat')['CreepInfo_090corr_NoBlip'][::20]
 #data3 = scipy.io.loadmat('jackie/CreepInfo_105MPa_corr.mat')['CreepInfo_105corr'][::20]
