@@ -120,6 +120,8 @@ data {
   //vector<lower=0.0>[L] thickness;
   int<lower=1> thickness[L];
   vector<lower=0.0>[N] y;
+  //vector[L] mus;
+  //vector<lower=0.0>[L] sigmas;
 }
 
 parameters {
@@ -128,28 +130,29 @@ parameters {
 
   real<lower=0.0> sigma;
   real a;
-  real b;
-  real c[L];
-  //real d;
+  real b[T];
 }
 
 model {
+  sigmas ~ cauchy(0.0, 10.0);
+  sigma ~ cauchy(0.0, 10.0);
+
   for(n in 1:N) {
-    y[n] ~ normal(mus[labels[n]], sigmas[labels[n]]);
+    y[n] ~ lognormal(mus[labels[n]], sigmas[labels[n]]);
   }
 
-  //for(l in 1:L) {
-  //  mus[l] ~ lognormal(a * log(stress[l] + c[thickness[l]]) + b, sigma);
-  //}
+  for(l in 1:L) {
+    mus[l] ~ normal(a * log(stress[l]) + b[thickness[l]], sigma);
+  }
 }
 
-//generated quantities {
-//  vector[N] yhat;
-//
-//  for(n in 1:N) {
-//    yhat[n] <- lognormal_rng(a * log(stress[n] + c / sqrt(thickness[n]) + d) + b, sigma);
-//  }
-//}
+generated quantities {
+  vector[L] yhat;//log
+
+  for(l in 1:L) {
+    yhat[l] <- lognormal_rng(normal_rng(a * log(stress[l]) + b[thickness[l]], sigma), sigmas[l]);
+  }
+}
 """
 
 sm2 = pystan.StanModel(model_code = model_code)
@@ -163,16 +166,22 @@ ys = []
 thicknesses = []
 stresses = []
 labels = []
+mus = []
+sigmas = []
+slopes2 = []
 for e, (slope_samples, (_, _, _, _, thickness, stress, heat_treatment)) in enumerate(zip(slopes, files)):
     if heat_treatment == 447.8:
         break
 
+    slopes2.append(numpy.log(slope_samples))
     thicknesses.append(thicknessLabels[thickness])
     stresses.append(stress)
     ys.extend(slope_samples)
     labels.extend([e + 1] * len(slope_samples))
+    mus.append(numpy.log(slope_samples).mean())
+    sigmas.append(numpy.log(slope_samples).std())
 #%%
-sm2.sampling(data = {
+fit2 = sm2.sampling(data = {
     'N' : len(ys),
     'L' : len(stresses),
     'T' : len(thicknesses),
@@ -180,7 +189,18 @@ sm2.sampling(data = {
     'thickness' : thicknesses,
     'stress' : stresses,
     'labels' : labels
+    #'mus' : mus,
+    #'sigmas' : sigmas
 })
+
+print fit2
+
+r = fit2.extract()
+#%%
+for slope_samples, generated in zip(slopes2, r['yhat'].transpose()):
+    seaborn.distplot(slope_samples, norm_hist = True)#, alpha = 0.5)
+    seaborn.distplot(generated[-200:], norm_hist = True)#, alpha = 0.5)
+    plt.show()
 #%%
 #data2 = scipy.io.loadmat('jackie/CreepInfo_90MPa_corr_NoBlip.mat')['CreepInfo_090corr_NoBlip'][::20]
 #data3 = scipy.io.loadmat('jackie/CreepInfo_105MPa_corr.mat')['CreepInfo_105corr'][::20]
