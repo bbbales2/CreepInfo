@@ -37,7 +37,12 @@ files = [
     ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/Heat Treatment/creep_65HT_350MPa_noTertiary.mat', 'creep65HT_350notertiary', 0.0, 1.0, 65, 350, 813.3, True]
 ]
 
+files = sorted(files, key = lambda x : x[-3])
+
 df = pandas.DataFrame(files, columns = ['file', 'variable', 'iminf', 'imaxf', 'thickness', 'stress', 'heat_treatment', 'treated'])
+
+df = df[df['treated'] == False]
+df = df.reset_index(drop = True)
 #%%
 
 model_code = """
@@ -72,8 +77,10 @@ sm = pystan.StanModel(model_code = model_code)
 
 #%%
 slopes = []
+print "{0:10s}, {1:10s}, {2:12s}, {3}".format("thickness", "stress", "heat treated", "avg minimum strain rate")
 for idx, row in df.iterrows():
-    filename, variable, imin, imax, _, _, _, heat_treated = row.values
+    filename, variable, imin, imax, thickness, stress, _, heat_treated = row.values
+
     data = scipy.io.loadmat(filename)
     data = data[variable]
     imin = int(len(data) * imin)
@@ -92,22 +99,22 @@ for idx, row in df.iterrows():
       'y' : data[:, 1]
     })
 
-    slope_samples = fit.extract()['a'][numpy.random.choice(range(2000, 4000), 500, replace = False)]
+    slope_samples = fit.extract()['a'][numpy.random.choice(range(2000, 4000), 1000, replace = False)]
 
     slopes.append(slope_samples)
 
-    plt.plot(data[:, 0], data[:, 1], '-*')
+    #plt.plot(data[:, 0], data[:, 1], '-*')
 
-    for i in numpy.random.choice(range(2000, 4000), 50, replace = False):
-        plt.plot(data[:, 0], fit.extract()['yhat'][i], '--*')
-    plt.show()
+    #for i in numpy.random.choice(range(2000, 4000), 50, replace = False):
+    #    plt.plot(data[:, 0], fit.extract()['yhat'][i], '--*')
+    #plt.show()
 
-    seaborn.distplot(slope_samples)
-    plt.show()
+    #seaborn.distplot(slope_samples)
+    #plt.show()
 
-    print numpy.std(slope_samples), numpy.mean(slope_samples)
+    print "{0:10.0f}, {1:10.0f}, {2:12s}, {3:10.4e}".format(thickness, stress, str(heat_treated), numpy.mean(slope_samples) / 1.0e6)
 
-    print len(data)
+    #print len(data)numpy.std(slope_samples),
 #%%
 
 model_code = """
@@ -115,10 +122,11 @@ data {
   //int<lower=1> N; // Number of single samples
   int<lower=1> L;
   int<lower=1> T;
-  //int<lower=1> labels[N];
+  int<lower=1> labels[L];
   vector<lower=0.0>[L] stress;
-  //vector<lower=0.0>[L] thickness;
-  int<lower=1> thickness[L];
+  vector<lower=0.0>[L] thickness;
+  vector<lower=0.0>[T] stress0;
+  //int<lower=1> thickness[L];
   //vector<lower=0.0>[N] y;
   vector[L] mus;
   vector<lower=0.0>[L] sigmas;
@@ -129,30 +137,38 @@ parameters {
   //real<lower=0.0> sigmas[L];
 
   real<lower=0.0> sigma;
+  //real a_mu;
+  //real<lower = 0.0> a_sigma;
   real a;
   real b;//[T];
   real c;
 }
 
 model {
+  real tmp[L];
   //sigmas ~ cauchy(0.0, 10.0);
   sigma ~ cauchy(0.0, 10.0);
-  b ~ cauchy(0.0, 10.0);
+  //a ~ cauchy(0.0, 10.0);
+  //b ~ cauchy(0.0, 10.0);
+  //c ~ normal(-2.2, 5.0);
 
   //for(n in 1:N) {
   //  y[n] ~ lognormal(mus[labels[n]], sigmas[labels[n]]);
   //}
 
   for(l in 1:L) {
-    mus[l] ~ normal(a * (log(stress[l]) + b * log(thickness[l])) + c, sigma);
+    //mus[l] ~ normal(a * log(tmp[l] / min(stress)) + c, sigma);
+    mus[l] ~ normal(a * log(stress[l] / stress0[labels[l]]) + b * log(max(thickness) / thickness[l]) + c, sigma);
   }
 }
 
 generated quantities {
   vector[L] yhat;//log
 
-  for(l in 1:L) {
-    yhat[l] <- lognormal_rng(normal_rng(a * (log(stress[l]) + b * log(thickness[l])) + c, sigma), sigmas[l]);
+  {
+    for(l in 1:L) {
+      yhat[l] <- lognormal_rng(normal_rng(a * log(stress[l] / stress0[labels[l]]) + b * log(max(thickness) / thickness[l]) + c, sigma), sigmas[l]);
+    }
   }
 }
 """
@@ -169,29 +185,33 @@ stresses = []
 labels = []
 mus = []
 sigmas = []
-slopes2 = []
 for idx, row in df.iterrows():
     if row['treated']:
-        break
+        continue
 
     slope_samples = slopes[idx]
 
-    slopes2.append(slope_samples)
-    thicknesses.append(row['thickness'])#thicknessLabels[]
+    thicknesses.append(row['thickness'])#
     stresses.append(row['stress'])
     ys.extend(slope_samples)
-    labels.extend([idx + 1] * len(slope_samples))
+    #labels.extend([idx + 1] * len(slope_samples))
+    labels.append(thicknessLabels[row['thickness']])
     mus.append(numpy.log(slope_samples).mean())
     sigmas.append(numpy.log(slope_samples).std())
+
+stress0 = []
+for thickness in sorted(thicknessLabels.keys()):
+    stress0.append(min(df[df['thickness'] == thickness]['stress']))
 #%%
 fit2 = sm2.sampling(data = {
     #'N' : len(ys),
     'L' : len(stresses),
-    'T' : len(thicknesses),
+    'T' : len(thicknessLabels),
     #'y' : ys,
+    'stress0' : stress0,
     'thickness' : thicknesses,
     'stress' : stresses,
-    #'labels' : labels
+    'labels' : labels,
     'mus' : mus,
     'sigmas' : sigmas
 })
@@ -200,12 +220,19 @@ print fit2
 
 r = fit2.extract()
 #%%
-for slope_samples, generated in zip(slopes2, r['yhat'].transpose()):
+for slope_samples, generated in zip(slopes, r['yhat'].transpose()):
     seaborn.distplot(slope_samples, norm_hist = True)
     seaborn.distplot(generated[-200:], norm_hist = True)
     print slope_samples.mean(), generated[-200:].mean()
     plt.legend(['data', 'generated'])
     plt.show()
+#%%
+plt.plot(mus, 'r*')
+for i in range(1):
+    idx = numpy.random.randint(3800, 4000)#3300
+    plt.plot(numpy.log(r['yhat'][idx]), 'b*')
+    print r['a'][idx], r['b'][idx], r['c'][idx]
+plt.show()
 #%%
 thickness_ = []
 stresses_ = []
@@ -232,7 +259,7 @@ df2 = pandas.DataFrame(data = { 'thickness' : thickness_, 'stresses' : stresses_
 #    df3 = df2[df2['thickness'] == thickness]
 
 seaborn.boxplot(x = 'stresses', y = 'log_slopes', hue = 'generated', data = df2, linewidth = 0.5)
-plt.gcf().set_size_inches((24, 12))
+plt.gcf().set_size_inches((20, 14))
 plt.show()
 #%%
 import seaborn
@@ -244,15 +271,7 @@ df3 = pandas.DataFrame({'a' : r['a'][-200:], 'b' : r['b'][-200:], 'c' : r['c'][-
 seaborn.pairplot(df3)
 plt.gcf().set_size_inches((12, 8))
 plt.show()
-
-import scipy.stats
-
-g = seaborn.PairGrid(df3)
-g.map_diag(plt.hist)
-g.map_offdiag(seaborn.kdeplot, n_levels = 6);
-plt.gcf().set_size_inches((12, 8))
-plt.show()
-
+#%%
 for name, d in [('a', r['a']), ('b', r['b']), ('c', r['c']), ('sigma', r['sigma'])]:
     seaborn.distplot(d[-200:], kde = False, fit = scipy.stats.norm)
     plt.title("Dist. {0} w/ mean {1:0.4f} and std. {2:0.4f}".format(name, numpy.mean(d[-200:]), numpy.std(d[-200:])))
