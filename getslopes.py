@@ -6,6 +6,7 @@ import pystan
 import numpy
 import seaborn
 import pandas
+import pickle
 
 #data1 = scipy.io.loadmat()[]
 files = [
@@ -116,6 +117,10 @@ for idx, row in df.iterrows():
 
     #print len(data)numpy.std(slope_samples),
 #%%
+f = open('/home/bbales2/CreepInfo/dump', 'w')
+pickle.dump((slopes, df), f)
+f.close()
+#%%
 
 model_code = """
 data {
@@ -136,19 +141,25 @@ parameters {
   //real mus[L];
   //real<lower=0.0> sigmas[L];
 
-  real<lower=0.0> sigma;
-  //real a_mu;
-  //real<lower = 0.0> a_sigma;
-  real a;
-  real b;//[T];
+  real<lower=0.0> sigma[T];
+  real a_mu;
+  real<lower = 0.0> a_sigma;
+  real b_mu;
+  real<lower = 0.0> b_sigma;
+  real a[T];
+  real b[T];
   real c;
 }
 
 model {
   real tmp[L];
   //sigmas ~ cauchy(0.0, 10.0);
-  sigma ~ cauchy(0.0, 10.0);
-  //a ~ cauchy(0.0, 10.0);
+  //sigma ~ cauchy(0.0, 10.0);
+  a_sigma ~ normal(0.0, 0.01);
+  b_sigma ~ normal(0.0, 0.01);
+  a ~ normal(a_mu, a_sigma);
+  b ~ normal(b_mu, b_sigma);
+  sigma ~ normal(0.0, 5.0);
   //b ~ cauchy(0.0, 10.0);
   //c ~ normal(-2.2, 5.0);
 
@@ -158,7 +169,7 @@ model {
 
   for(l in 1:L) {
     //mus[l] ~ normal(a * log(tmp[l] / min(stress)) + c, sigma);
-    mus[l] ~ normal(a * log(stress[l] / stress0[labels[l]]) + b * log(max(thickness) / thickness[l]) + c, sigma);
+    mus[l] ~ normal(a[labels[l]] * log(stress[l] / stress0[labels[l]]) + b[labels[l]] * log(max(thickness) / thickness[l]) + c, sigma[labels[l]]);
   }
 }
 
@@ -167,7 +178,7 @@ generated quantities {
 
   {
     for(l in 1:L) {
-      yhat[l] <- lognormal_rng(normal_rng(a * log(stress[l] / stress0[labels[l]]) + b * log(max(thickness) / thickness[l]) + c, sigma), sigmas[l]);
+      yhat[l] <- lognormal_rng(normal_rng(a[labels[l]] * log(stress[l] / stress0[labels[l]]) + b[labels[l]] * log(max(thickness) / thickness[l]) + c, sigma[labels[l]]), sigmas[l]);
     }
   }
 }
@@ -258,7 +269,7 @@ df2 = pandas.DataFrame(data = { 'thickness' : thickness_, 'stresses' : stresses_
 #for thickness in sorted(set(df2['thickness'])):
 #    df3 = df2[df2['thickness'] == thickness]
 
-seaborn.boxplot(x = 'stresses', y = 'log_slopes', hue = 'generated', data = df2, linewidth = 0.5)
+seaborn.boxplot(x = 'stresses', y = 'log_slopes', hue = 'generated', data = df2, linewidth = 0.5, showfliers = False)
 plt.gcf().set_size_inches((20, 14))
 plt.show()
 #%%
@@ -266,7 +277,7 @@ import seaborn
 import pandas
 import matplotlib.pyplot as plt
 
-df3 = pandas.DataFrame({'a' : r['a'][-200:], 'b' : r['b'][-200:], 'c' : r['c'][-200:], 'sigma' : r['sigma'][-200:]})
+df3 = pandas.DataFrame({'a' : r['a'][-200:, 0], 'b' : r['b'][-200:, 0], 'c' : r['c'][-200:], 'sigma' : r['b'][-200:, 2]})
 
 seaborn.pairplot(df3)
 plt.gcf().set_size_inches((12, 8))
