@@ -43,6 +43,7 @@ files = sorted(files, key = lambda x : x[-3])
 df = pandas.DataFrame(files, columns = ['file', 'variable', 'iminf', 'imaxf', 'thickness', 'stress', 'heat_treatment', 'treated'])
 
 df = df[df['treated'] == False]
+df = df.query('not (thickness == 200 and (stress == 260 or stress == 290))')
 df = df.reset_index(drop = True)
 #%%
 
@@ -84,6 +85,7 @@ for idx, row in df.iterrows():
 
     data = scipy.io.loadmat(filename)
     data = data[variable]
+
     imin = int(len(data) * imin)
     imax = int(len(data) * imax)
     data = data[imin : imax]
@@ -155,8 +157,8 @@ model {
   real tmp[L];
   //sigmas ~ cauchy(0.0, 10.0);
   //sigma ~ cauchy(0.0, 10.0);
-  a_sigma ~ normal(0.0, 0.01);
-  b_sigma ~ normal(0.0, 0.01);
+  a_sigma ~ normal(0.0, 5.01);
+  b_sigma ~ normal(0.0, 10.01);
   a ~ normal(a_mu, a_sigma);
   b ~ normal(b_mu, b_sigma);
   sigma ~ normal(0.0, 5.0);
