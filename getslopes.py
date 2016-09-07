@@ -43,7 +43,7 @@ files = sorted(files, key = lambda x : x[-3])
 df = pandas.DataFrame(files, columns = ['file', 'variable', 'iminf', 'imaxf', 'thickness', 'stress', 'heat_treatment', 'treated'])
 
 df = df[df['treated'] == False]
-df = df.query('not (thickness == 200 and (stress == 260 or stress == 290))')
+#df = df.query('not (thickness == 200 and (stress == 260 or stress == 290))')
 df = df.reset_index(drop = True)
 #%%
 
@@ -144,12 +144,12 @@ parameters {
   //real<lower=0.0> sigmas[L];
 
   real<lower=0.0> sigma[T];
-  real a_mu;
-  real<lower = 0.0> a_sigma;
-  real b_mu;
-  real<lower = 0.0> b_sigma;
-  real a[T];
-  real b[T];
+  //real a_mu;
+  //real<lower = 0.0> a_sigma;
+  //real b_mu;
+  //real<lower = 0.0> b_sigma;
+  real a;//[T];
+  real b;//[T];
   real c;
 }
 
@@ -157,10 +157,10 @@ model {
   real tmp[L];
   //sigmas ~ cauchy(0.0, 10.0);
   //sigma ~ cauchy(0.0, 10.0);
-  a_sigma ~ normal(0.0, 5.01);
-  b_sigma ~ normal(0.0, 10.01);
-  a ~ normal(a_mu, a_sigma);
-  b ~ normal(b_mu, b_sigma);
+  //a_sigma ~ normal(0.0, 10.01);
+  //b_sigma ~ normal(0.0, 10.01);
+  //a ~ normal(a_mu, a_sigma);
+  //b ~ normal(b_mu, b_sigma);
   sigma ~ normal(0.0, 5.0);
   //b ~ cauchy(0.0, 10.0);
   //c ~ normal(-2.2, 5.0);
@@ -171,8 +171,9 @@ model {
 
   for(l in 1:L) {
     //mus[l] ~ normal(a * log(tmp[l] / min(stress)) + c, sigma);
-    mus[l] ~ normal(a[labels[l]] * log(stress[l] / stress0[labels[l]]) + b[labels[l]] * log(max(thickness) / thickness[l]) + c, sigma[labels[l]]);
-  }
+    //mus[l] ~ normal(a[labels[l]] * log(stress[l]) + b[labels[l]] * log(1 / thickness[l]) + c, sigma[labels[l]]);
+    mus[l] ~ normal(a * log(stress[l]) + b * log(1 / thickness[l]) + c, sigma[labels[l]]);
+  }// / stress0[labels[l]]
 }
 
 generated quantities {
@@ -180,8 +181,9 @@ generated quantities {
 
   {
     for(l in 1:L) {
-      yhat[l] <- lognormal_rng(normal_rng(a[labels[l]] * log(stress[l] / stress0[labels[l]]) + b[labels[l]] * log(max(thickness) / thickness[l]) + c, sigma[labels[l]]), sigmas[l]);
-    }
+      //yhat[l] <- lognormal_rng(normal_rng(a[labels[l]] * log(stress[l]) + b[labels[l]] * log(1 / thickness[l]) + c, sigma[labels[l]]), sigmas[l]);
+      yhat[l] <- lognormal_rng(normal_rng(a * log(stress[l]) + b * log(1 / thickness[l]) + c, sigma[labels[l]]), sigmas[l]);
+    }// / stress0[labels[l]]
   }
 }
 """
@@ -279,7 +281,22 @@ import seaborn
 import pandas
 import matplotlib.pyplot as plt
 
-df3 = pandas.DataFrame({'a' : r['a'][-200:, 0], 'b' : r['b'][-200:, 0], 'c' : r['c'][-200:], 'sigma' : r['b'][-200:, 2]})
+stuff = { 'c' : r['c'][-500:] }
+for i in range(4):
+    stuff['a{0}'.format(i)] = r['a'][-500:, i]
+    stuff['b{0}'.format(i)] = r['b'][-500:, i]
+
+df3 = pandas.DataFrame(stuff)#{'a' : r['a'][-200:, 0], 'b' : r['b'][-200:, 0], 'c' : r['c'][-200:], 'sigma' : r['b'][-200:, 2]}
+
+seaborn.pairplot(df3)
+plt.gcf().set_size_inches((12, 8))
+plt.show()
+#%%
+import seaborn
+import pandas
+import matplotlib.pyplot as plt
+
+df3 = pandas.DataFrame({'a' : r['a'][-1000:], 'b' : r['b'][-1000:], 'c' : r['c'][-1000:]})#, 'sigma' : r['b'][-500:, 2]
 
 seaborn.pairplot(df3)
 plt.gcf().set_size_inches((12, 8))
