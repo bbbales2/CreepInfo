@@ -8,7 +8,7 @@ import seaborn
 import pandas
 import pickle
 
-#data1 = scipy.io.loadmat()[]
+
 files = [
     ['/home/bbales2/CreepInfo/2000nm-2B-2A/creep_2000A_200MPa_noTertiary.mat', 'creep2000A_200MPa_notertiary', 1.0 / 2.0, 1.0, 2000, 200, 0.0, False],
     ['/home/bbales2/CreepInfo/2000nm-2B-2A/creep_2000B_150MPa.mat', 'creep_2B_150_good', 1.0 / 2, 1.0, 2000, 150, 0.0, False],
@@ -102,7 +102,7 @@ for idx, row in df.iterrows():
       'y' : data[:, 1]
     })
 
-    slope_samples = fit.extract()['a'][numpy.random.choice(range(2000, 4000), 1000, replace = False)]
+    slope_samples = 1e-6 * fit.extract()['a'][numpy.random.choice(range(2000, 4000), 1000, replace = False)]
 
     slopes.append(slope_samples)
 

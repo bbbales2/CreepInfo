@@ -92,7 +92,7 @@ for idx, row in df.iterrows():
       'y' : data[:, 1]
     })
 
-    slope_samples = fit.extract()['a'][numpy.random.choice(range(2000, 4000), 1000, replace = False)]
+    slope_samples = 1e-6 * fit.extract()['a'][numpy.random.choice(range(2000, 4000), 1000, replace = False)]
 
     new_slopes = []
     for slope in slope_samples:
@@ -274,12 +274,10 @@ print 'P(b[3] < 0) = {0}'.format(sum(r['b'][-2000:, 3] < 0.0) / 2000.0)
 
 labels = ['65C', '65D', '65B', '65HT']
 
-
+print 'Sample, actual stress, mean predicted stress, std. predicted stress'
 for idx, row in df.iterrows():
     samples = r['yhat'][-2000:, idx]
-    print numpy.mean(samples), numpy.std(samples)
-    print labels[row['labels'] - 1], '{0}Mpa'.format(row['stress'])#, '{0} m/s'.format(numpy.exp(mus[idx]) / 1e6)
-    print '----'
+    print labels[row['labels'] - 1], '{0}Mpa'.format(row['stress']), numpy.mean(samples), numpy.std(samples)#, '{0} m/s'.format(numpy.exp(mus[idx]) / 1e6)
 
 #%%
 plt.plot(r['yhat'][-2000:].mean(axis = 0), mus, 'bo')
@@ -288,6 +286,18 @@ ax = plt.gca()
 for idx, row in df.iterrows():
     ax.annotate('{0}, {1}hr'.format(labels[row['labels'] - 1], row['heat_treatment']), xy = (df['stress'][idx], mus[idx]))
 plt.gcf().set_size_inches((12, 8))
+plt.xlabel('Stress')
+plt.ylabel('-ln(0.01 / ess)')
+#%%
+import seaborn
+import pandas
+import matplotlib.pyplot as plt
+
+df3 = pandas.DataFrame({'a' : r['a'][-1000:], 'b' : r['b'][-1000:], 'c' : r['c'][-1000:]})#, 'sigma' : r['b'][-500:, 2]
+
+seaborn.pairplot(df3)
+plt.gcf().set_size_inches((12, 8))
+plt.show()
 #%%
 
 thickness_ = []
