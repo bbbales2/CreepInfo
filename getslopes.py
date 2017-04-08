@@ -9,14 +9,43 @@ import pandas
 import pickle
 
 
+#files = [
+#    ['/home/bbales2/CreepInfo/2000nm-2B-2A/creep_2000A_200MPa_noTertiary.mat', 'creep2000A_200MPa_notertiary', 1.0 / 2.0, 1.0, 2000, 200, 0.0, False],
+#    ['/home/bbales2/CreepInfo/2000nm-2B-2A/creep_2000B_150MPa.mat', 'creep_2B_150_good', 1.0 / 2, 1.0, 2000, 150, 0.0, False],
+#    ['/home/bbales2/CreepInfo/2000nm-2B-2A/creep_2000B_170MPa.mat', 'creep_2B_170_good', 0.0, 1.0, 2000, 170, 0.0, False],
+#    ['/home/bbales2/CreepInfo/2000nm-2B-2A/creep_2000B_190MPa.mat', 'creep_2B_190_full', 0.0, -1.0 / 4.0, 2000, 190, 0.0, False],
+#    ['/home/bbales2/CreepInfo/2000nm-2B-2A/creep_2000B_200MPa.mat', 'creep_2B_200_goodyay', 0.0, 1.0, 2000, 200, 0.0, False],
+#    ['/home/bbales2/CreepInfo/8000nm-8A/creep_8000A_140MPa.mat', 'creepinfo_8A_140', 1.0 / 2.0, 1.0, 8000, 140, 0.0, False],
+#    ['/home/bbales2/CreepInfo/8000nm-8A/creep_8000A_150MPa.mat', 'creepinfo_8A_150', 1.0 / 2.0, 1.0, 8000, 150, 0.0, False],
+#    ['/home/bbales2/CreepInfo/200nm-200A-200B/creep_200A_245MPa.mat', 'creepinfo_200a_245_full', 1.0 / 2.0, -1.0 / 4.0, 200, 245, 0.0, False],
+#    ['/home/bbales2/CreepInfo/200nm-200A-200B/creep_200A_260MPa.mat', 'creepinfo_200a_260', 0.0, 1.0, 200, 260, 0.0, False],
+#    ['/home/bbales2/CreepInfo/200nm-200A-200B/creep_200A_290MPa.mat', 'creepinfo_200a_290_full', 0.0, 1.0 / 4.0, 200, 290, 0.0, False],
+#    ['/home/bbales2/CreepInfo/200nm-200A-200B/creep_200B_275MPa.mat', 'creepinfo_200B_275MPa', 1.0 / 2.0, 1.0, 200, 275, 0.0, False],
+#    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/As Rolled/creep_65C_320MPa.mat', 'creep65C_320full', 1.0 / 2.0, 1.0, 65, 320, 3.0, False],
+#    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/As Rolled/creep_65C_350MPa.mat', 'creep65C_350full', 0.0, 1.0 / 2.0, 65, 350, 71.0, False],
+#    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/As Rolled/creep_65D_275MPa.mat', 'CreepInfo_275corr', 1.0 / 2.0, 1.0, 65, 275, 4.3, False],
+#    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/As Rolled/creep_65D_290MPa.mat', 'CreepInfo_290corr', 0.0, 1.0, 65, 290, 103.1, False],
+#    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/As Rolled/creep_65D_320MPa.mat', 'CreepInfo_320corr', 0.0, 1.0, 65, 320, 193.4, False],
+#    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/As Rolled/creep_65D_335MPa.mat', 'CreepInfo_335corrected', 0.0, 1.0, 65, 335, 266.1, False],
+#    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/Heat Treatment/creep_65B_230MPa.mat', 'CreepInfo65B_230full', 0.0, 1.0, 65, 230, 447.8, True],
+#    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/Heat Treatment/creep_65B_245MPa.mat', 'CreepInfo65B_245full', 0.0, 1.0, 65, 245, 514.6, True],
+#    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/Heat Treatment/creep_65B_260MPa.mat', 'CreepInfo65B_260full', 0.0, 1.0, 65, 260, 593.1, True],
+#    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/Heat Treatment/creep_65B_290MPa.mat', 'CreepInfo65B_290full', 0.0, 1.0, 65, 290, 641.6, True],
+#    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/Heat Treatment/creep_65B_320MPa.mat', 'CreepInfo65B_320full', 0.0, 1.0, 65, 320, 721.3, True],
+#    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/Heat Treatment/creep_65B_350MPa.mat', 'CreepInfo65B_350full', 0.0, 1.0, 65, 350, 827.5, True],
+#    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/Heat Treatment/creep_65B_370MPa_noTertiary.mat', 'CreepInfo65B_370beforetertiary', 0.0, 1.0, 65, 370, 895.8, True],
+#    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/Heat Treatment/creep_65HT_320MPa.mat', 'creep65HT_320full', 1.0 / 2.0, 1.0, 65, 320, 723.0, True],
+#    ['/home/bbales2/CreepInfo/65nm-65B-65HT-65C-65D/Heat Treatment/creep_65HT_350MPa_noTertiary.mat', 'creep65HT_350notertiary', 0.0, 1.0, 65, 350, 813.3, True]
+#]
+
 files = [
-    ['/home/bbales2/CreepInfo/2000nm-2B-2A/creep_2000A_200MPa_noTertiary.mat', 'creep2000A_200MPa_notertiary', 1.0 / 2.0, 1.0, 2000, 200, 0.0, False],
-    ['/home/bbales2/CreepInfo/2000nm-2B-2A/creep_2000B_150MPa.mat', 'creep_2B_150_good', 1.0 / 2, 1.0, 2000, 150, 0.0, False],
-    ['/home/bbales2/CreepInfo/2000nm-2B-2A/creep_2000B_170MPa.mat', 'creep_2B_170_good', 0.0, 1.0, 2000, 170, 0.0, False],
-    ['/home/bbales2/CreepInfo/2000nm-2B-2A/creep_2000B_190MPa.mat', 'creep_2B_190_full', 0.0, -1.0 / 4.0, 2000, 190, 0.0, False],
-    ['/home/bbales2/CreepInfo/2000nm-2B-2A/creep_2000B_200MPa.mat', 'creep_2B_200_goodyay', 0.0, 1.0, 2000, 200, 0.0, False],
-    ['/home/bbales2/CreepInfo/8000nm-8A/creep_8000A_140MPa.mat', 'creepinfo_8A_140', 1.0 / 2.0, 1.0, 8000, 140, 0.0, False],
-    ['/home/bbales2/CreepInfo/8000nm-8A/creep_8000A_150MPa.mat', 'creepinfo_8A_150', 1.0 / 2.0, 1.0, 8000, 150, 0.0, False],
+    ['/home/bbales2/CreepInfo/2000nm-2B-2A/creep_2000A_200MPa_noTertiary.mat', 'creep2000A_200MPa_notertiary', 1.0 / 2.0, 1.0, 500, 200, 0.0, False],
+    ['/home/bbales2/CreepInfo/2000nm-2B-2A/creep_2000B_150MPa.mat', 'creep_2B_150_good', 1.0 / 2, 1.0, 500, 150, 0.0, False],
+    ['/home/bbales2/CreepInfo/2000nm-2B-2A/creep_2000B_170MPa.mat', 'creep_2B_170_good', 0.0, 1.0, 500, 170, 0.0, False],
+    ['/home/bbales2/CreepInfo/2000nm-2B-2A/creep_2000B_190MPa.mat', 'creep_2B_190_full', 0.0, -1.0 / 4.0, 500, 190, 0.0, False],
+    ['/home/bbales2/CreepInfo/2000nm-2B-2A/creep_2000B_200MPa.mat', 'creep_2B_200_goodyay', 0.0, 1.0, 500, 200, 0.0, False],
+    ['/home/bbales2/CreepInfo/8000nm-8A/creep_8000A_140MPa.mat', 'creepinfo_8A_140', 1.0 / 2.0, 1.0, 1000, 140, 0.0, False],
+    ['/home/bbales2/CreepInfo/8000nm-8A/creep_8000A_150MPa.mat', 'creepinfo_8A_150', 1.0 / 2.0, 1.0, 1000, 150, 0.0, False],
     ['/home/bbales2/CreepInfo/200nm-200A-200B/creep_200A_245MPa.mat', 'creepinfo_200a_245_full', 1.0 / 2.0, -1.0 / 4.0, 200, 245, 0.0, False],
     ['/home/bbales2/CreepInfo/200nm-200A-200B/creep_200A_260MPa.mat', 'creepinfo_200a_260', 0.0, 1.0, 200, 260, 0.0, False],
     ['/home/bbales2/CreepInfo/200nm-200A-200B/creep_200A_290MPa.mat', 'creepinfo_200a_290_full', 0.0, 1.0 / 4.0, 200, 290, 0.0, False],
@@ -46,12 +75,14 @@ df = df[df['treated'] == False]
 #df = df.query('not (thickness == 200 and (stress == 260 or stress == 290))')
 df = df.reset_index(drop = True)
 #%%
+#%%
 
 model_code = """
 data {
   int<lower=1> N; // Number of single samples
   vector<lower=0.0>[N] t;
   vector<lower=0.0>[N] y;
+  matrix[N, N] y2[N, N];
 }
 
 parameters {
@@ -79,7 +110,7 @@ sm = pystan.StanModel(model_code = model_code)
 
 #%%
 slopes = []
-print "{0:10s}, {1:10s}, {2:12s}, {3}".format("thickness", "stress", "heat treated", "avg minimum strain rate")
+print "{0:10s}, {1:10s}, {2:12s}, {3:10s}, {4}".format("thickness", "stress", "heat treated", "avg minimum strain rate", "std deviation of minimum strain rate")
 for idx, row in df.iterrows():
     filename, variable, imin, imax, thickness, stress, _, heat_treated = row.values
 
@@ -89,6 +120,9 @@ for idx, row in df.iterrows():
     imin = int(len(data) * imin)
     imax = int(len(data) * imax)
     data = data[imin : imax]
+
+    plt.plot(data[:, 0], data[:, 1])
+    plt.show()
 
     if len(data) > 100:
         data = data[sorted(numpy.random.choice(range(len(data)), 100, replace = False))]
@@ -102,7 +136,10 @@ for idx, row in df.iterrows():
       'y' : data[:, 1]
     })
 
-    slope_samples = 1e-6 * fit.extract()['a'][numpy.random.choice(range(2000, 4000), 1000, replace = False)]
+    sample_idxs = numpy.random.choice(range(2000, 4000), 1000, replace = False)
+
+    slope_samples = 1e-6 * fit.extract()['a'][sample_idxs]
+    error_samples = 1e-6 * fit.extract()['sigma'][sample_idxs]
 
     slopes.append(slope_samples)
 
@@ -115,7 +152,7 @@ for idx, row in df.iterrows():
     #seaborn.distplot(slope_samples)
     #plt.show()
 
-    print "{0:10.0f}, {1:10.0f}, {2:12s}, {3:10.4e}".format(thickness, stress, str(heat_treated), numpy.mean(slope_samples) / 1.0e6)
+    print "{0:10.0f}, {1:10.0f}, {2:12s}, {3:10.4e}, {4:10.4e}".format(thickness, stress, str(heat_treated), numpy.mean(slope_samples) / 1.0e6, numpy.mean(error_samples) / 1.0e6)
 
     #print len(data)numpy.std(slope_samples),
 #%%
