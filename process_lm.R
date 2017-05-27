@@ -5,6 +5,7 @@ library(readr)
 library(rstanarm)
 library(shinystan)
 library(purrrlyr)
+library(plotly)
 
 df = tbl_df(read_csv('/home/bbales2/CreepInfo/creep.csv')) %>%
   select(-iminf, -imaxf) %>%
@@ -47,17 +48,32 @@ s = extract(fit)
 
 colnames(s$muhat) <- 1:30
 
-posterior = as.tibble(s$muhat[1:100,]) %>% gather("row", "lmus_calc", 1:30) %>% mutate(row = as.integer(row))
+posterior = as.tibble(s$muhat[,]) %>% gather("row", "lmus_calc", 1:30) %>% mutate(row = as.integer(row))
 
 df3 = left_join(df2 %>% mutate(row = row_number()), posterior, by = "row")
 df3 = df3 %>% mutate(thickness = factor(thickness))
-df4 = df3 %>% group_by(thickness, stress) %>% summarize(lmus = max(lmus), lq = quantile(lmus_calc, 0.125), tq = quantile(lmus_calc, 0.875), lmus_calc = max(lmus_calc))
+df4 = df3 %>% group_by(thickness, stress) %>%
+  summarize(mean_lmus_calc = mean(lmus_calc),
+            p2sd = mean(lmus_calc) - 2.0 * sd(lmus_calc),
+            m2sd = mean(lmus_calc) + 2.0 * sd(lmus_calc),
+            lmus_calc = NA) %>% 
+  right_join(df2 %>% mutate(thickness = factor(thickness)), by = c("thickness", "stress"))
 
-df3 %>% ggplot(aes(stress, exp(lmus_calc))) +
+df3 %>% group_by(thickness, stress) %>% sample_n(100) %>% ggplot(aes(stress, exp(lmus_calc))) +
   geom_jitter(alpha = 0.2) +
-  geom_errorbar(data = df4, aes(ymin = exp(lq), ymax = exp(tq)), color = "dodgerblue1", alpha = 0.8, size = 0.75) +
-  geom_smooth(method = 'lm', formula = y ~ x, color = "dodgerblue1") +
+  geom_errorbar(data = df4, aes(ymin = exp(m2sd), ymax = exp(p2sd)), color = "dodgerblue1", alpha = 0.8, size = 0.75) +
+  geom_line(data = df4, aes(stress, exp(mean_lmus_calc)), color = "dodgerblue1") +
   geom_point(data = df4, aes(stress, exp(lmus)), color = "red", shape = 17) +
   scale_y_log10() +
   facet_wrap(~ thickness, scales = "free", labeller = "label_both")
 
+df4 %>% mutate(ln_slopes = lmus) %>% select(-lmus_calc, -thickness_id, -lmus) %>% print(n = 40)
+
+colnames(s$sigma) <- 1:4
+
+df4 %>% group_by(thickness, stress) %>%
+
+as.tibble(s$sigma[,]) %>%
+  gather("row", "sigmas", 1:4) %>%
+  mutate(row = as.integer(row)) %>%
+  left_join()
