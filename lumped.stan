@@ -24,8 +24,10 @@ model {
 
 generated quantities {
   vector[L] muhat;
+  vector[L] mumu;
   
   for(l in 1:L) {
-    muhat[l] = normal_rng(a * log(stress[l]) + b * log(1.0 / thickness[l]) + c, sigma[labels[l]]);
+    mumu[l] = a * log(stress[l]) + b * log(1.0 / thickness[l]) + c;
+    muhat[l] = normal_rng(mumu[l], sigma[labels[l]]);
   }
 }

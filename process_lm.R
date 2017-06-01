@@ -47,23 +47,36 @@ launch_shinystan(fit)
 s = extract(fit)
 
 colnames(s$muhat) <- 1:30
+colnames(s$mumu) <- 1:30
 
-posterior = as.tibble(s$muhat[,]) %>% gather("row", "lmus_calc", 1:30) %>% mutate(row = as.integer(row))
+posterior = bind_cols(as.tibble(s$muhat[,]) %>%
+                        gather("row", "lmus_calc", 1:30) %>%
+                        mutate(row = as.integer(row)),
+                      as.tibble(s$mumu[,]) %>%
+                        gather("row", "mumus_calc", 1:30) %>%
+                        select(-row))
 
 df3 = left_join(df2 %>% mutate(row = row_number()), posterior, by = "row")
 df3 = df3 %>% mutate(thickness = factor(thickness))
 df4 = df3 %>% group_by(thickness, stress) %>%
-  summarize(mean_lmus_calc = mean(lmus_calc),
-            p2sd = mean(lmus_calc) - 2.0 * sd(lmus_calc),
-            m2sd = mean(lmus_calc) + 2.0 * sd(lmus_calc),
-            lmus_calc = NA) %>% 
+  summarize(mean_mumus_calc = mean(mumus_calc),
+            mean_mumus_m2sd = mean_mumus_calc - 2.0 * sd(mumus_calc),
+            mean_mumus_p2sd = mean_mumus_calc + 2.0 * sd(mumus_calc),
+            mean_lmus_calc = mean(lmus_calc),
+            mean_lmus_m2sd = mean_lmus_calc - 2.0 * sd(lmus_calc),
+            mean_lmus_p2sd = mean_lmus_calc + 2.0 * sd(lmus_calc),
+            lmus_calc = NA) %>%
   right_join(df2 %>% mutate(thickness = factor(thickness)), by = c("thickness", "stress"))
 
+df3 %>% summarize(sd_abc = sd(mumus_calc), sd_abc_sigma = sd(lmus_calc))
+  
 df3 %>% group_by(thickness, stress) %>% sample_n(100) %>% ggplot(aes(stress, exp(lmus_calc))) +
   geom_jitter(alpha = 0.2) +
-  geom_errorbar(data = df4, aes(ymin = exp(m2sd), ymax = exp(p2sd)), color = "dodgerblue1", alpha = 0.8, size = 0.75) +
-  geom_line(data = df4, aes(stress, exp(mean_lmus_calc)), color = "dodgerblue1") +
-  geom_point(data = df4, aes(stress, exp(lmus)), color = "red", shape = 17) +
+  #geom_errorbar(data = df4, aes(ymin = exp(m2sd), ymax = exp(p2sd)), color = "dodgerblue1", alpha = 0.8, size = 0.75) +
+  geom_line(data = df4, aes(stress, exp(mean_mumus_calc)), color = "dodgerblue1") +
+  geom_ribbon(data = df4, aes(stress, ymin = exp(mean_lmus_m2sd), ymax = exp(mean_lmus_p2sd)), fill = "grey", alpha = 0.4) +
+  geom_ribbon(data = df4, aes(stress, ymin = exp(mean_mumus_m2sd), ymax = exp(mean_mumus_p2sd)), fill = "dodgerblue1", alpha = 0.2) +
+  geom_point(data = df4, aes(stress, exp(lmus)), color = "violetred2") +
   scale_y_log10() +
   facet_wrap(~ thickness, scales = "free", labeller = "label_both")
 
@@ -77,3 +90,4 @@ as.tibble(s$sigma[,]) %>%
   gather("row", "sigmas", 1:4) %>%
   mutate(row = as.integer(row)) %>%
   left_join()
+
