@@ -6,6 +6,7 @@ library(rstanarm)
 library(shinystan)
 library(purrrlyr)
 library(plotly)
+library(ggthemes)
 
 df = tbl_df(read_csv('/home/bbales2/CreepInfo/creep.csv')) %>%
   select(-iminf, -imaxf) %>%
@@ -42,9 +43,22 @@ data = list(L = nrow(df),
 
 fit = stan("/home/bbales2/CreepInfo/lumped.stan", data = data, cores = 4)
 
-launch_shinystan(fit)
+#launch_shinystan(fit)
 
 s = extract(fit)
+
+dfp = left_join(df2 %>% mutate(idx = 1),
+                as_tibble(list(aa = s$a, bb = s$b, cc = s$c)) %>% mutate(idx = 1)) %>%
+  select(-idx) %>%
+  group_by(thickness) %>%
+  sample_n(1000) %>%
+  ungroup()
+
+dfp %>% ggplot(aes(exp(cc) * (stress^aa), slopes / ((1 / thickness)^bb))) +
+  geom_point(aes(color = factor(thickness)), alpha = 0.25) +
+  scale_x_log10() +
+  scale_y_log10() +
+  theme_bw() + guides(colour = guide_legend(override.aes = list(size = 5)))
 
 colnames(s$muhat) <- 1:30
 colnames(s$mumu) <- 1:30
@@ -68,7 +82,15 @@ df4 = df3 %>% group_by(thickness, stress) %>%
             lmus_calc = NA) %>%
   right_join(df2 %>% mutate(thickness = factor(thickness)), by = c("thickness", "stress"))
 
-df3 %>% summarize(sd_abc = sd(mumus_calc), sd_abc_sigma = sd(lmus_calc))
+df3 %>% group_by(thickness, stress) %>%
+  summarize(sd_abc = sd(mumus_calc) / log(10), sd_abc_sigma = sd(lmus_calc) / log(10)) %>%
+  print(n = 40) %>%
+  group_by(thickness)
+
+df3 %>% group_by(thickness, stress) %>%
+  summarize(sd_abc = sd(mumus_calc) / log(10), sd_abc_sigma = sd(lmus_calc) / log(10)) %>%
+  group_by(thickness) %>%
+  summarize(mu_sd_abc = mean(sd_abc), mean_sd_abc_sigma = mean(sd_abc_sigma))
   
 df3 %>% group_by(thickness, stress) %>% sample_n(100) %>% ggplot(aes(stress, exp(lmus_calc))) +
   geom_jitter(alpha = 0.2) +
@@ -78,7 +100,7 @@ df3 %>% group_by(thickness, stress) %>% sample_n(100) %>% ggplot(aes(stress, exp
   geom_ribbon(data = df4, aes(stress, ymin = exp(mean_mumus_m2sd), ymax = exp(mean_mumus_p2sd)), fill = "dodgerblue1", alpha = 0.2) +
   geom_point(data = df4, aes(stress, exp(lmus)), color = "violetred2") +
   scale_y_log10() +
-  facet_wrap(~ thickness, scales = "free", labeller = "label_both")
+  facet_wrap(~ thickness, labeller = "label_both") + theme_excel()# + scale_color_excel()
 
 df4 %>% mutate(ln_slopes = lmus) %>% select(-lmus_calc, -thickness_id, -lmus) %>% print(n = 40)
 
