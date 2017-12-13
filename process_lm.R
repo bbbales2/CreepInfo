@@ -2,14 +2,10 @@ library(tidyverse)
 library(rstan)
 library(ggplot2)
 library(readr)
-library(rstanarm)
-library(shinystan)
 #library(purrrlyr)
 
 # Read in all the list of files to process
-df = tbl_df(read_csv('/home/bbales2/CreepInfo/creep.csv')) %>%
-  select(-iminf, -imaxf) %>%
-  mutate(csv = paste(file, ".csv", sep = ""))
+df = tbl_df(read_csv('creep.csv'))
 
 getSlope = function(filename) {
   data = read_csv(filename)
