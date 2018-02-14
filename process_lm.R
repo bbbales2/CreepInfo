@@ -39,12 +39,21 @@ data = list(L = nrow(df2),
             labels = df2$thickness_id,
             stress = df2$stress,
             thickness = df2$thickness,
-            mus = df2$lmus)
+            mus = df2$lmus,
+            thicknesses = c(65, 200, 500, 2000))
 
 # Run the LMP fit
 fit = stan("/home/bbales2/CreepInfo/lumped.stan", data = data, cores = 4)
 
+fit2 = stan("/home/bbales2/CreepInfo/hierarchical.stan", data = data, cores = 4)
+fit3 = stan("/home/bbales2/CreepInfo/hierarchical2.stan", data = data, cores = 4,
+            control = list(max_treedepth = 12))
+
 s = extract(fit)
+
+launch_shinystan(fit)
+launch_shinystan(fit2)
+launch_shinystan(fit3)
 
 # Get all the data out and plot it!
 dfp = left_join(df2 %>% mutate(idx = 1),

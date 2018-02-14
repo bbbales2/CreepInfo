@@ -9,31 +9,33 @@ data {
 
 parameters {
   real<lower=0.0> sigma[T];
-  real a_mu;
-  real<lower = 0.0> a_sigma;
-  real b_mu;
-  real<lower = 0.0> b_sigma;
-  real a[T];
-  real b[T];
+  real<lower=0.0> lambda;
+  real mu;
+  vector[max(labels)] n;
   real c;
 }
 
+#transformed parameters {
+#  vector[max(labels)] n = z * lambda;
+#}
+
 model {
-  a_sigma ~ normal(0.0, 10.01);
-  b_sigma ~ normal(0.0, 10.01);
-  a ~ normal(a_mu, a_sigma);
-  b ~ normal(b_mu, b_sigma);
   sigma ~ normal(0.0, 5.0);
+  mu ~ normal(0.0, 10.0);
+  lambda ~ normal(0.0, 1.0);
+  n ~ normal(mu, lambda);
   
   for(l in 1:L) {
-    mus[l] ~ normal(a[labels[l]] * log(stress[l]) + b[labels[l]] * log(1.0 / thickness[l]) + c, sigma[labels[l]]);
+    mus[l] ~ normal(n[labels[l]] * log(stress[l]) + c, sigma[labels[l]]);
   }
 }
 
 generated quantities {
   vector[L] muhat;
-
+  vector[L] mumu;
+  
   for(l in 1:L) {
-    muhat[l] = normal_rng(a[labels[l]] * log(stress[l]) + b[labels[l]] * log(1.0 / thickness[l]) + c, sigma[labels[l]]);
+    mumu[l] = n[labels[l]] * log(stress[l]) + c;
+    muhat[l] = normal_rng(mumu[l], sigma[labels[l]]);
   }
 }
