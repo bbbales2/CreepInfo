@@ -42,7 +42,7 @@ data = list(L = nrow(df2),
 fit = stan("/home/bbales2/CreepInfo/lumped.stan", data = data, cores = 4)
 
 fit2 = stan("/home/bbales2/CreepInfo/hierarchical.stan", data = data, cores = 4)
-fit3 = stan("/home/bbales2/CreepInfo/hierarchical2.stan", data = data, cores = 4,
+fit3 = stan("/home/bbales2/CreepInfo/full_hierarchical.stan", data = data, cores = 4,
             control = list(max_treedepth = 12))
 
 s = extract(fit)
