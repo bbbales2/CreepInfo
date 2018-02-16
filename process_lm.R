@@ -5,7 +5,7 @@ library(readr)
 #library(purrrlyr)
 
 # Read in all the list of files to process
-df = tbl_df(read_csv('creep.csv'))
+df = tbl_df(read_csv('creep2.csv'))
 
 getSlope = function(filename) {
   data = read_csv(filename)
@@ -15,6 +15,17 @@ getSlope = function(filename) {
   c(coefficients(fit)[['time']], sqrt(vcov(fit)[['time', 'time']]))
 }
 
+getSlopes = function(filename) {
+  o = getSlope(filename)
+  
+  rnorm(100, o[1], o[2])
+}
+
+#
+df %>%
+  pull(csv) %>%
+  map(getSlopes)
+
 # For each csv file, read in the data, get a linear fit, and put it in a dataframe (df2)
 a = df %>%
   pull(csv) %>%
@@ -22,6 +33,7 @@ a = df %>%
   unlist() %>%
   matrix(ncol = 2, byrow = TRUE)
 colnames(a)[1:2] <- c("slopes", "slope_std_err")
+
 df2 = bind_cols(df, tbl_df(a)) %>%
   select(thickness, stress, slopes, slope_std_err) %>%
   mutate(thickness_id = as.integer(as.factor(thickness))) %>%
@@ -65,14 +77,14 @@ dfp %>% ggplot(aes(exp(cc) * (stress^aa), slopes / ((1 / thickness)^bb))) +
   scale_y_log10() +
   theme_bw() + guides(colour = guide_legend(override.aes = list(size = 5)))
 
-colnames(s$muhat) <- 1:30
-colnames(s$mumu) <- 1:30
+colnames(s$muhat) <- 1:nrow(df2)
+colnames(s$mumu) <- 1:nrow(df2)
 
 posterior = bind_cols(as.tibble(s$muhat[,]) %>%
-                        gather("row", "lmus_calc", 1:30) %>%
+                        gather("row", "lmus_calc", 1:nrow(df2)) %>%
                         mutate(row = as.integer(row)),
                       as.tibble(s$mumu[,]) %>%
-                        gather("row", "mumus_calc", 1:30) %>%
+                        gather("row", "mumus_calc", 1:nrow(df2)) %>%
                         select(-row))
 
 df3 = left_join(df2 %>% mutate(row = row_number()), posterior, by = "row")
@@ -108,3 +120,28 @@ df3 %>% group_by(thickness, stress) %>% sample_n(100) %>% ggplot(aes(stress, exp
   facet_wrap(~ thickness, labeller = "label_both")# + scale_color_excel()
 
 df4 %>% mutate(ln_slopes = lmus) %>% select(-lmus_calc, -thickness_id, -lmus) %>% print(n = 40)
+
+udf = s$uncertainty %>%
+  as.tibble %>%
+  setNames(1:ncol(.)) %>%
+  gather(row, uncertainty) %>%
+  mutate(row = as.integer(row),
+         uncertainty = uncertainty / log(10)) %>%
+  left_join(df2 %>% mutate(row = row_number()), posterior, by = "row")
+
+udf %>%
+  ggplot(aes(stress, uncertainty)) +
+  geom_jitter(alpha = 0.01) +
+  facet_wrap(~ thickness)
+  
+(udf %>% group_by(thickness, stress) %>%
+  summarize(m = mean(uncertainty),
+            sd = sd(uncertainty),
+            qm1 = quantile(uncertainty, probs = c(0.159)),
+            qp1 = quantile(uncertainty, probs = c(0.841))) %>% print(n = nrow(.))) %>%
+  ggplot(aes(stress, m)) +
+  geom_errorbar(aes(stress, ymin = m - sd, ymax = m + sd), colour = "red") +
+  geom_errorbar(aes(stress, ymin = qm1, ymax = qp1), colour = "green") +
+  geom_point() +
+  facet_wrap(~ thickness, labeller = "label_both") +
+  ggtitle("mean of log(pred) - log(actual) black dot\ngreen estimated +- 1 quantile\nred estimated +- 1 quantile assuming difference is normally distributed")
