@@ -9,8 +9,8 @@ data {
 
 parameters {
   real<lower=0.0> sigma[T];
-  real a;
-  real b;
+  real n;
+  real p;
   real c;
 }
 
@@ -18,7 +18,7 @@ model {
   sigma ~ normal(0.0, 5.0);
   
   for(l in 1:L) {
-    mus[l] ~ normal(a * log(stress[l]) + b * log(1.0 / thickness[l]) + c, sigma[labels[l]]);
+    mus[l] ~ normal(n * log(stress[l]) + p * log(1.0 / thickness[l]) + c, sigma[labels[l]]);
   }
 }
 
@@ -28,7 +28,7 @@ generated quantities {
   vector[L] uncertainty;
   
   for(l in 1:L) {
-    mumu[l] = a * log(stress[l]) + b * log(1.0 / thickness[l]) + c;
+    mumu[l] = n * log(stress[l]) + p * log(1.0 / thickness[l]) + c;
     muhat[l] = normal_rng(mumu[l], sigma[labels[l]]);
     uncertainty[l] = mus[l] - muhat[l];
   }
