@@ -2,8 +2,8 @@ data {
   int<lower=1> L;
   int<lower=1> T;
   int<lower=1> labels[L];
-  vector<lower=0.0>[L] stress;
-  vector<lower=0.0>[L] thickness;
+  vector[L] log_stress;
+  vector[L] log_inv_thickness;
   vector[L] mus;
 }
 
@@ -18,7 +18,7 @@ model {
   sigma ~ normal(0.0, 5.0);
   
   for(l in 1:L) {
-    mus[l] ~ normal(n * log(stress[l]) + p * log(1.0 / thickness[l]) + c, sigma[labels[l]]);
+    mus[l] ~ normal(n * log_stress[l] + p * log_inv_thickness[l] + c, sigma[labels[l]]);
   }
 }
 
@@ -28,7 +28,7 @@ generated quantities {
   vector[L] uncertainty;
   
   for(l in 1:L) {
-    mumu[l] = n * log(stress[l]) + p * log(1.0 / thickness[l]) + c;
+    mumu[l] = n * log_stress[l] + p * log_inv_thickness[l] + c;
     muhat[l] = normal_rng(mumu[l], sigma[labels[l]]);
     uncertainty[l] = mus[l] - muhat[l];
   }

@@ -44,7 +44,7 @@ data = list(L = nrow(df2),
             T = max(df2$thickness_id),
             labels = df2$thickness_id,
             log_stress = log(df2$stress) - df2$mean_log_stress,
-            log_inv_thickness = log(1 / df2$thickness) - mean(log(1 / df2$thickness)),
+            log_inv_thickness = log(1 / df2$thickness) - mean(log(1 / c(65, 200, 500, 2000))),
             mus = df2$lmus,
             log_inv_thicknesses = log(1 / c(65, 200, 500, 2000)) - mean(log(1 / c(65, 200, 500, 2000))))
 
@@ -54,7 +54,7 @@ fit2 = stan("/home/bbales2/CreepInfo/hierarchical.stan", data = data, cores = 4)
 fit3 = stan("/home/bbales2/CreepInfo/full_hierarchical.stan", data = data, cores = 4,
             control = list(max_treedepth = 12))
 
-s = rstan::extract(fit3)
+s = rstan::extract(fit)
 
 launch_shinystan(fit)
 launch_shinystan(fit2)
