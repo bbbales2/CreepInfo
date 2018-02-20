@@ -16,11 +16,6 @@ getSlope = function(filename) {
   c(coefficients(fit)[['time']], sqrt(vcov(fit)[['time', 'time']]))
 }
 
-#
-df %>%
-  pull(csv) %>%
-  map(getSlopes)
-
 # For each csv file, read in the data, get a linear fit, and put it in a dataframe (df2)
 a = df %>%
   pull(csv) %>%
@@ -43,7 +38,7 @@ df2 %>% print(n = 40)
 data = list(L = nrow(df2),
             T = max(df2$thickness_id),
             labels = df2$thickness_id,
-            log_stress = log(df2$stress) - df2$mean_log_stress,
+            log_stress = log(df2$stress) - mean(log(df2$stress)),#df2$mean_log_stress,
             log_inv_thickness = log(1 / df2$thickness) - mean(log(1 / c(65, 200, 500, 2000))),
             mus = df2$lmus,
             log_inv_thicknesses = log(1 / c(65, 200, 500, 2000)) - mean(log(1 / c(65, 200, 500, 2000))))
@@ -107,7 +102,7 @@ df3 %>% group_by(thickness, stress) %>%
   summarize(mu_sd_abc = mean(sd_abc), mean_sd_abc_sigma = mean(sd_abc_sigma))
 
 df3 %>% group_by(thickness, stress) %>% sample_n(100) %>% ggplot(aes(stress, exp(lmus_calc))) +
-  geom_jitter(alpha = 0.2) +
+  #geom_jitter(alpha = 0.2) +
   #geom_errorbar(data = df4, aes(ymin = exp(025), ymax = exp(975)), color = "dodgerblue1", alpha = 0.8, size = 0.75) +
   geom_line(data = df4, aes(stress, exp(mean_mumus_calc)), color = "dodgerblue1") +
   geom_ribbon(data = df4, aes(stress, ymin = exp(mean_lmus_025), ymax = exp(mean_lmus_975)), fill = "grey", alpha = 0.4) +
