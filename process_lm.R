@@ -69,10 +69,10 @@ gquants = function(a) {
 
 s$sdo_hat %>%
   gquants %>%
-  ggplot(aes(stress)) +
+  ggplot(aes(log(stress))) +
   geom_ribbon(aes(ymin = y5, ymax = y95, group = thickness, fill = as.factor(thickness)), alpha = 0.25) +
   geom_errorbar(data = s$sdo %>% gquants, aes(ymin = y5, ymax = y95, group = thickness, color = as.factor(thickness))) +
-  geom_point(data = df2, aes(stress, lmus - mean(s$p) * log(1 / df2$thickness)))
+  geom_point(data = df2, aes(log(stress), lmus - mean(s$p) * log(1 / df2$thickness)))
 
 s$lso_hat %>%
   gquants %>%
