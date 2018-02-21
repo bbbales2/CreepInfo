@@ -38,10 +38,10 @@ df2 %>% print(n = 40)
 data = list(L = nrow(df2),
             T = max(df2$thickness_id),
             labels = df2$thickness_id,
-            log_stress = log(df2$stress) - mean(log(df2$stress)),#df2$mean_log_stress,
-            log_inv_thickness = log(1 / df2$thickness) - mean(log(1 / c(65, 200, 500, 2000))),
+            log_stress = log(df2$stress),# - mean(log(df2$stress)),#df2$mean_log_stress,
+            log_inv_thickness = log(1 / df2$thickness),# - mean(log(1 / c(65, 200, 500, 2000))),
             mus = df2$lmus,
-            log_inv_thicknesses = log(1 / c(65, 200, 500, 2000)) - mean(log(1 / c(65, 200, 500, 2000))))
+            log_inv_thicknesses = log(1 / c(65, 200, 500, 2000)))# - mean(log(1 / c(65, 200, 500, 2000))))
 
 # Run the LMP fit
 fit = stan("/home/bbales2/CreepInfo/lumped.stan", data = data, cores = 4)
@@ -49,11 +49,39 @@ fit2 = stan("/home/bbales2/CreepInfo/hierarchical.stan", data = data, cores = 4)
 fit3 = stan("/home/bbales2/CreepInfo/full_hierarchical.stan", data = data, cores = 4,
             control = list(max_treedepth = 12))
 
-s = rstan::extract(fit)
-
 launch_shinystan(fit)
 launch_shinystan(fit2)
 launch_shinystan(fit3)
+
+s = rstan::extract(fit)
+
+gquants = function(a) {
+  a %>%
+    as.tibble %>%
+    setNames(1:nrow(df2)) %>%
+    gather(row, y) %>%
+    mutate(row = as.integer(row)) %>%
+    left_join(df2 %>% mutate(row = row_number()), by = "row") %>%
+    group_by(thickness, stress) %>%
+    summarize(y5 = quantile(y, 0.05),
+              y95 = quantile(y, 0.95))
+}
+
+s$sdo_hat %>%
+  gquants %>%
+  ggplot(aes(stress)) +
+  geom_ribbon(aes(ymin = y5, ymax = y95, group = thickness, fill = as.factor(thickness)), alpha = 0.25) +
+  geom_errorbar(data = s$sdo %>% gquants, aes(ymin = y5, ymax = y95, group = thickness, color = as.factor(thickness))) +
+  geom_point(data = df2, aes(stress, lmus - mean(s$p) * log(1 / df2$thickness)))
+
+s$lso_hat %>%
+  gquants %>%
+  mutate(measured_slopes = TRUE) %>%
+  bind_rows(s$lso %>% gquants %>% mutate(measured_slopes = FALSE)) %>%
+  ggplot(aes(log(1 / thickness))) +
+  geom_errorbar(aes(ymin = y5, ymax = y95, group = stress, color = as.factor(thickness)), alpha = 0.25, size = 1) +
+  geom_point(data = df2, aes(log(1 / thickness), lmus - mean(s$n) * log(df2$stress))) +
+  facet_grid(. ~ measured_slopes, labeller = "label_both")
 
 # Get all the data out and plot it!
 dfp = left_join(df2 %>% mutate(idx = 1),
