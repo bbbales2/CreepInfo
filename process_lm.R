@@ -27,7 +27,8 @@ colnames(a)[1:2] <- c("slopes", "slope_std_err")
 df2 = bind_cols(df, tbl_df(a)) %>%
   select(thickness, stress, slopes, slope_std_err) %>%
   mutate(thickness_id = as.integer(as.factor(thickness))) %>%
-  mutate(lmus = log(slopes))
+  mutate(lmus = log(slopes),
+         stress = stress * 1000000)
 
 df2 = df2 %>% left_join(df2 %>% group_by(thickness) %>%
                           summarize(mean_log_stress = mean(log(stress))))
@@ -35,16 +36,25 @@ df2 = df2 %>% left_join(df2 %>% group_by(thickness) %>%
 # This prints the slopes and errors in slopes for all combos of thicknesses and stress
 df2 %>% print(n = 40)
 
-data = list(L = nrow(df2),
+P = 50
+log_predict_stress = log(1000000 * c(150, 200, 250, 300))
+S = length(log_predict_stress)
+log_inv_predict_thickness = seq(log(1.0 / 65.0), log(1.0 / 2000), length = P)
+data = list(P = P,
+            S = S,
+            L = nrow(df2),
             T = max(df2$thickness_id),
             labels = df2$thickness_id,
             log_stress = log(df2$stress),# - mean(log(df2$stress)),#df2$mean_log_stress,
             log_inv_thickness = log(1 / df2$thickness),# - mean(log(1 / c(65, 200, 500, 2000))),
+            log_predict_stress = log_predict_stress,
+            log_inv_predict_thickness = log_inv_predict_thickness,
             mus = df2$lmus,
             log_inv_thicknesses = log(1 / c(65, 200, 500, 2000)))# - mean(log(1 / c(65, 200, 500, 2000))))
 
 # Run the LMP fit
-fit = stan("/home/bbales2/CreepInfo/lumped.stan", data = data, cores = 4)
+fit = stan("/home/bbales2/CreepInfo/lumped.stan", data = data, cores = 4,
+           control = list(max_treedepth = 12))
 fit2 = stan("/home/bbales2/CreepInfo/hierarchical.stan", data = data, cores = 4)
 fit3 = stan("/home/bbales2/CreepInfo/full_hierarchical.stan", data = data, cores = 4,
             control = list(max_treedepth = 12))
@@ -55,6 +65,26 @@ launch_shinystan(fit3)
 
 s = rstan::extract(fit)
 
+map(1:S, function(i) {
+  s$muhat2[, i,] %>%
+    as.tibble %>%
+    setNames(log_inv_predict_thickness) %>%
+    gather(log_inv_thickness, log_e) %>%
+    mutate(thickness = 1.0 / exp(as.numeric(log_inv_thickness)),
+           slopes = exp(log_e) - mean(s$n) ,
+           stress = exp(log_predict_stress[i]))
+}) %>% bind_rows %>%
+  group_by(thickness, stress) %>%
+  summarize(slopes_low = quantile(slopes, 0.10),
+            slopes_high = quantile(slopes, 0.90)) %>%
+  ggplot(aes(thickness)) +
+  geom_ribbon(aes(ymin = slopes_low, ymax = slopes_high, fill = as.factor(stress)), alpha = 0.25) + 
+  geom_point(data = df2, aes(thickness, slopes)) +
+  geom_text(data = df2, aes(thickness, slopes, label = stress), hjust = 0, vjust = 0) + 
+  scale_x_log10() +
+  scale_y_log10() +
+  ggtitle("50% posterior intervals on creep rate vs. thickness predictions")
+
 gquants = function(a) {
   a %>%
     as.tibble %>%
@@ -63,16 +93,24 @@ gquants = function(a) {
     mutate(row = as.integer(row)) %>%
     left_join(df2 %>% mutate(row = row_number()), by = "row") %>%
     group_by(thickness, stress) %>%
-    summarize(y5 = quantile(y, 0.05),
-              y95 = quantile(y, 0.95))
+    summarize(y5 = quantile(y, 0.25),
+              y95 = quantile(y, 0.75))
 }
 
 s$sdo_hat %>%
+  as.tibble %>%
+  setNames(1:nrow(df2)) %>%
+  mutate
+  gather(row, y) %>%
+  mutate(row = as.integer(row)) %>%
+  left_join(df2 %>% mutate(row = row_number()), by = "row")
+
+s$sdo_hat %>%
   gquants %>%
-  ggplot(aes(log(stress))) +
+  ggplot(aes(stress)) +
   geom_ribbon(aes(ymin = y5, ymax = y95, group = thickness, fill = as.factor(thickness)), alpha = 0.25) +
   geom_errorbar(data = s$sdo %>% gquants, aes(ymin = y5, ymax = y95, group = thickness, color = as.factor(thickness))) +
-  geom_point(data = df2, aes(log(stress), lmus - mean(s$p) * log(1 / df2$thickness)))
+  geom_point(data = df2, aes(stress, lmus - mean(s$p) * log(1 / df2$thickness)))
 
 s$lso_hat %>%
   gquants %>%
@@ -81,6 +119,88 @@ s$lso_hat %>%
   ggplot(aes(log(1 / thickness))) +
   geom_errorbar(aes(ymin = y5, ymax = y95, group = stress, color = as.factor(thickness)), alpha = 0.25, size = 1) +
   geom_point(data = df2, aes(log(1 / thickness), lmus - mean(s$n) * log(df2$stress))) +
+  facet_grid(. ~ measured_slopes, labeller = "label_both")
+
+gquants2 = function(a) {
+  a %>%
+    as.tibble %>%
+    setNames(1:nrow(df2)) %>%
+    gather(row, y) %>%
+    mutate(row = as.integer(row)) %>%
+    left_join(df2 %>% mutate(row = row_number()), by = "row") %>%
+    group_by(thickness, stress) %>%
+    summarize(y5 = quantile(y, 0.25),
+              y95 = quantile(y, 0.75))
+}
+
+s$muhat %>%
+  as.tibble %>%
+  setNames(1:nrow(df2)) %>%
+  gather(row, y) %>%
+  mutate(row = as.integer(row)) %>%
+  left_join(df2 %>% mutate(row = row_number()), by = "row") %>%
+  mutate(normalized = y - mean(s$n) * log(stress)) %>%
+  group_by(thickness, stress) %>%
+  summarize(y5 = quantile(y, 0.25),
+            y95 = quantile(y, 0.75)) %>%
+  #bind_rows(s$lso %>% gquants %>% mutate(measured_slopes = FALSE)) %>%
+  ggplot(aes(log(1 / thickness))) +
+  geom_errorbar(aes(ymin = y5, ymax = y95, group = stress, color = as.factor(thickness)), alpha = 0.25, size = 1) +
+  geom_point(data = df2, aes(log(1 / thickness), lmus - mean(s$n) * log(df2$stress)))
+
+s$muhat %>%
+  gquants %>%
+  mutate(measured_slopes = TRUE) %>%
+  #bind_rows(s$lso %>% gquants %>% mutate(measured_slopes = FALSE)) %>%
+  ggplot(aes(log(1 / thickness))) +
+  geom_errorbar(aes(ymin = y5, ymax = y95, group = stress, color = as.factor(thickness)), alpha = 0.25, size = 1) +
+  geom_point(data = df2, aes(log(1 / thickness), lmus - mean(s$n) * log(df2$stress))) +
+  facet_grid(. ~ measured_slopes, labeller = "label_both")
+
+
+s$lso_hat %>%
+  as.tibble %>%
+  setNames(1:nrow(df2))
+
+
+gquants2 = function(a) {
+  a %>%
+    as.tibble %>%
+    setNames(1:nrow(df2)) %>%
+    gather(row, y) %>%
+    mutate(row = as.integer(row)) %>%
+    left_join(df2 %>% mutate(row = row_number()), by = "row") %>%
+    group_by(stress) %>%
+    summarize(y5 = quantile(y, 0.05),
+              y95 = quantile(y, 0.95))
+}
+
+s$sdo_hat %>%
+  gquants2 %>%
+  ggplot(aes(stress)) +
+  geom_ribbon(aes(ymin = y5, ymax = y95), alpha = 0.25) +
+  geom_errorbar(data = s$sdo %>% gquants, aes(ymin = y5, ymax = y95, group = thickness, color = as.factor(thickness))) +
+  geom_point(data = df2, aes(stress, lmus - mean(s$p) * log(1 / df2$thickness)))
+
+gquants3 = function(a) {
+  a %>%
+    as.tibble %>%
+    setNames(1:nrow(df2)) %>%
+    gather(row, y) %>%
+    mutate(row = as.integer(row)) %>%
+    left_join(df2 %>% mutate(row = row_number()), by = "row") %>%
+    group_by(thickness) %>%
+    summarize(y5 = quantile(y, 0.05),
+              y95 = quantile(y, 0.95))
+}
+
+s$lso_hat %>%
+  gquants3 %>%
+  mutate(measured_slopes = TRUE) %>%
+  bind_rows(s$lso %>% gquants3 %>% mutate(measured_slopes = FALSE)) %>%
+  ggplot(aes(log(1 / thickness))) +
+  geom_ribbon(aes(ymin = y5, ymax = y95), alpha = 0.25, size = 1) +
+  geom_point(data = df2, aes(log(1 / thickness), lmus - mean(s$n) * log(df2$stress), colour = as.factor(thickness))) +
   facet_grid(. ~ measured_slopes, labeller = "label_both")
 
 # Get all the data out and plot it!
