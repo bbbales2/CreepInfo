@@ -37,9 +37,9 @@ df2 = df2 %>% left_join(df2 %>% group_by(thickness) %>%
 df2 %>% print(n = 40)
 
 P = 50
-log_predict_stress = log(1000000 * c(150, 200, 250, 300))
-S = length(log_predict_stress)
-log_inv_predict_thickness = seq(log(1.0 / 65.0), log(1.0 / 2000), length = P)
+S = 20
+log_predict_stress = log(1000000 * seq(125, 375, length = S))#c(150, 200, 250, 300)
+log_inv_predict_thickness = seq(log(1.0 / 52.0), log(1.0 / 2500), length = P)
 data = list(P = P,
             S = S,
             L = nrow(df2),
@@ -65,25 +65,53 @@ launch_shinystan(fit3)
 
 s = rstan::extract(fit)
 
-map(1:S, function(i) {
-  s$muhat2[, i,] %>%
-    as.tibble %>%
-    setNames(log_inv_predict_thickness) %>%
-    gather(log_inv_thickness, log_e) %>%
-    mutate(thickness = 1.0 / exp(as.numeric(log_inv_thickness)),
-           slopes = exp(log_e) - mean(s$n) ,
-           stress = exp(log_predict_stress[i]))
-}) %>% bind_rows %>%
-  group_by(thickness, stress) %>%
-  summarize(slopes_low = quantile(slopes, 0.10),
-            slopes_high = quantile(slopes, 0.90)) %>%
+(map(1:S, function(i) {
+    s$muhat2[, i,] %>%
+      as.tibble %>%
+      setNames(log_inv_predict_thickness) %>%
+      gather(log_inv_thickness, log_e) %>%
+      mutate(thickness = 1.0 / exp(as.numeric(log_inv_thickness)),
+             normalized_slopes = exp(log_e - mean(s$n) * log_predict_stress[i]),
+             stress = exp(log_predict_stress[i]))
+  }) %>% bind_rows %>%
+  group_by(thickness) %>%
+  summarize(normalized_slopes_low = quantile(normalized_slopes, 0.05),
+            normalized_slopes_high = quantile(normalized_slopes, 0.95),
+            median_slopes = median(normalized_slopes)) -> to_save) %>%
   ggplot(aes(thickness)) +
-  geom_ribbon(aes(ymin = slopes_low, ymax = slopes_high, fill = as.factor(stress)), alpha = 0.25) + 
-  geom_point(data = df2, aes(thickness, slopes)) +
-  geom_text(data = df2, aes(thickness, slopes, label = stress), hjust = 0, vjust = 0) + 
+  geom_ribbon(aes(ymin = normalized_slopes_low, ymax = normalized_slopes_high), alpha = 0.25) +
+  geom_line(aes(thickness, median_slopes)) +
+  geom_point(data = df2, aes(thickness, exp(log(slopes) - mean(s$n) * log(stress)))) +
+  geom_text(data = df2, aes(thickness, exp(log(slopes) - mean(s$n) * log(stress)), label = stress), hjust = 0, vjust = 0) + 
   scale_x_log10() +
   scale_y_log10() +
-  ggtitle("50% posterior intervals on creep rate vs. thickness predictions")
+  ggtitle("90% posterior intervals on creep rate vs. thickness predictions")
+
+write.csv(to_save, "nsr_vs_thickness.csv")
+
+(map(1:P, function(i) {
+  s$muhat2[,, i] %>%
+    as.tibble %>%
+    setNames(log_predict_stress) %>%#
+    gather(log_stress, log_e) %>%
+    mutate(thickness = 1.0 / exp(log_inv_predict_thickness[i]),
+           normalized_slopes = exp(log_e - mean(s$p) * log_inv_predict_thickness[i]),
+           stress = exp(as.numeric(log_stress)))
+}) %>% bind_rows %>%
+    group_by(stress) %>%
+    summarize(normalized_slopes_low = quantile(normalized_slopes, 0.05),
+              normalized_slopes_high = quantile(normalized_slopes, 0.95),
+              median_slopes = median(normalized_slopes)) -> to_save_2) %>%
+  ggplot(aes(stress)) +
+  geom_ribbon(aes(ymin = normalized_slopes_low, ymax = normalized_slopes_high), alpha = 0.25) +
+  geom_line(aes(stress, median_slopes)) +
+  geom_point(data = df2, aes(stress, exp(log(slopes) - mean(s$p) * log(1 / thickness)))) +
+  geom_text(data = df2, aes(stress, exp(log(slopes) - mean(s$p) * log(1 / thickness)), label = stress), hjust = 0, vjust = 0) + 
+  scale_x_log10(breaks = scales::pretty_breaks(n = 5)) +
+  scale_y_log10() +
+  ggtitle("90% posterior intervals on creep rate vs. stress predictions")
+
+write.csv(to_save_2, "nsr_vs_stress.csv")
 
 gquants = function(a) {
   a %>%

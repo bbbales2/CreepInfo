@@ -1,6 +1,6 @@
 clear all; clc;
 
-data = csvread("nsr_vs_thickness.csv", 1, 1);
+data = csvread("nsr_vs_stress.csv", 1, 1);
 
 thickness = data(:, 1);
 nsl = data(:, 2); % 5% quantile

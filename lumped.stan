@@ -6,7 +6,7 @@ data {
   int<lower=1> labels[L];
   vector[L] log_stress;
   vector[L] log_inv_thickness;
-  vector[T] log_predict_stress;
+  vector[S] log_predict_stress;
   vector[P] log_inv_predict_thickness;
   vector[L] mus;
 }
