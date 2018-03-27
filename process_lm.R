@@ -28,7 +28,8 @@ df2 = bind_cols(df, tbl_df(a)) %>%
   select(thickness, stress, slopes, slope_std_err) %>%
   mutate(thickness_id = as.integer(as.factor(thickness))) %>%
   mutate(lmus = log(slopes),
-         stress = stress * 1000000)
+         stress = stress * 1000000,
+         thickness = thickness * 1e-9)
 
 df2 = df2 %>% left_join(df2 %>% group_by(thickness) %>%
                           summarize(mean_log_stress = mean(log(stress))))
@@ -39,7 +40,7 @@ df2 %>% print(n = 40)
 P = 50
 S = 20
 log_predict_stress = log(1000000 * seq(125, 375, length = S))#c(150, 200, 250, 300)
-log_inv_predict_thickness = seq(log(1.0 / 52.0), log(1.0 / 2500), length = P)
+log_inv_predict_thickness = seq(log(1.0e9 / 10.0), log(1.0e9 / 5000), length = P)
 data = list(P = P,
             S = S,
             L = nrow(df2),
@@ -50,7 +51,7 @@ data = list(P = P,
             log_predict_stress = log_predict_stress,
             log_inv_predict_thickness = log_inv_predict_thickness,
             mus = df2$lmus,
-            log_inv_thicknesses = log(1 / c(65, 200, 500, 2000)))# - mean(log(1 / c(65, 200, 500, 2000))))
+            log_inv_thicknesses = log(1e9 / c(65, 200, 500, 2000)))# - mean(log(1 / c(65, 200, 500, 2000))))
 
 # Run the LMP fit
 fit = stan("/home/bbales2/CreepInfo/lumped.stan", data = data, cores = 4,
